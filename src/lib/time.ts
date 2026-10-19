@@ -89,3 +89,8 @@ export function todayLocal(): string {
   const d = String(now.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
+
+// Индекс дня недели, 0 = понедельник.
+export function weekdayIndex(iso: string): number {
+  return (new Date(dayNumber(iso) * MS_DAY).getUTCDay() + 6) % 7;
+}

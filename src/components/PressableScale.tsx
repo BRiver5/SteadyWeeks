@@ -7,7 +7,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 type Props = Omit<PressableProps, "style"> & {
   scaleTo?: number;
   style?: StyleProp<ViewStyle>;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 };
 
 // Общий press-фидбек на всё приложение: масштаб вниз на нажатии, пружинный

@@ -1,48 +1,62 @@
 // Палитра приложения. Это единственный файл, где должны жить цветовые значения —
 // компоненты и экраны берут цвета только отсюда, магические hex-коды в JSX запрещены.
 //
-// ВАЖНО: при старте нового приложения из шаблона поменяй accent (и, если нужно,
-// background/surface) на свои — дизайн не должен повторяться от приложения к приложению,
-// даже если тема совпадает.
+// Steady Weeks: нефритовый акцент #138652 (tools/palette-search.js, сектор 153°:
+// зелёных нет среди последних десяти записей реестра) на тёплом "меловом" фоне.
+// Вторичный тон — охра закрепов/запасных дней.
 
 export const light = {
-  background: "#FFFFFF",
-  backgroundAlt: "#FAFAFA",
+  background: "#F6F5F0",
+  backgroundAlt: "#ECEBE4",
   surface: "#FFFFFF",
-  surfaceAlt: "#F2F2F2",
-  border: "#E5E5E5",
-  ink: "#1A1A1A",
-  inkMuted: "#6B6B6B",
-  inkFaint: "#A3A3A3",
+  surfaceAlt: "#F3F2EC",
+  border: "#E2E0D7",
+  ink: "#1C211E",
+  inkMuted: "#5F655F",
+  inkFaint: "#9DA19A",
   onAccent: "#FFFFFF",
-  accent: "#2F5DFF",
-  danger: "#E5484D",
-  success: "#2E9E5B",
+  accent: "#138652",
+  accentSoft: "#DCEEE3",
+  accentDeep: "#0B5C37",
+  // Закреп / запасной день в плане.
+  pin: "#A8650F",
+  pinSoft: "#F5E7D0",
+  danger: "#C03B33",
+  dangerSoft: "#F6DEDB",
+  success: "#138652",
   // Предупреждение/второе свайп-действие (SwipeRow, бейдж Segmented) — тёмный
-  // янтарь, белый текст на нём ≥ 4.5:1. Подбирать под палитру приложения.
-  signal: "#9C5F12",
+  // янтарь, белый текст на нём ≥ 4.5:1.
+  signal: "#9A5B0B",
   // Затемнение под шторкой (Sheet) и цвет строки состояния, пока шторка открыта:
-  // statusDimmed = background × 0.55 + ink × 0.45 (пересчитать при смене фона/ink).
-  scrim: "rgba(26,26,26,0.45)",
-  statusDimmed: "#989898",
+  // statusDimmed = background × 0.55 + ink × 0.45.
+  scrim: "rgba(28,33,30,0.45)",
+  statusDimmed: "#949691",
+  // Категориальные цвета привычек — приглушённые, различимые между собой.
+  habit: ["#138652", "#2F68B0", "#B4572B", "#7A4DAE", "#A98516", "#B8456C", "#2E8796", "#5E6B26"],
 };
 
 export const dark = {
-  background: "#0E0E10",
-  backgroundAlt: "#141416",
-  surface: "#1B1B1E",
-  surfaceAlt: "#232326",
-  border: "#2C2C30",
-  ink: "#F2F2F2",
-  inkMuted: "#A3A3A9",
-  inkFaint: "#6B6B72",
+  background: "#101412",
+  backgroundAlt: "#161B18",
+  surface: "#1C221F",
+  surfaceAlt: "#242B27",
+  border: "#2E3631",
+  ink: "#EEF1EE",
+  inkMuted: "#A6ADA7",
+  inkFaint: "#6C746E",
   onAccent: "#FFFFFF",
-  accent: "#5B7CFF",
-  danger: "#FF6B6F",
-  success: "#3FBE79",
+  accent: "#2FB074",
+  accentSoft: "#17382A",
+  accentDeep: "#7FD9AC",
+  pin: "#E0A040",
+  pinSoft: "#3A2C16",
+  danger: "#F06A62",
+  dangerSoft: "#3A1C1A",
+  success: "#2FB074",
   signal: "#E0A040",
   scrim: "rgba(0,0,0,0.6)",
-  statusDimmed: "#060607",
+  statusDimmed: "#070908",
+  habit: ["#2FB074", "#5B93DB", "#D97B4E", "#A07AD6", "#D2AE3E", "#DC6F94", "#4FB3C2", "#93A44A"],
 };
 
 export type Palette = typeof light;
