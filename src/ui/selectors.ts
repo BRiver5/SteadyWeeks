@@ -46,8 +46,8 @@ export function boardDays(s: Snapshot): BoardDay[] {
       day,
       label: WEEKDAYS[wd],
       date: Number(day.slice(8, 10)),
-      load: pi >= 0 ? s.plan.load[pi] : doneMinutes,
-      capacity: pi >= 0 ? s.plan.capacity[pi] : s.busy.includes(wd) ? 0 : s.capacity[wd],
+      load: pi >= 0 ? s.plan.load[pi] + doneMinutes : doneMinutes,
+      capacity: pi >= 0 ? s.plan.capacity[pi] + doneMinutes : s.busy.includes(wd) ? 0 : s.capacity[wd],
       isToday: day === s.today,
       isPast,
       busy: s.busy.includes(wd),
@@ -68,13 +68,13 @@ export function dialDays(s: Snapshot): DialDay[] {
 export function statusLabel(hp: HabitPlan): string {
   switch (hp.status) {
     case "met":
-      return "Quota met";
+      return "Quota met";
     case "unreachable":
-      return "Out of days";
+      return "Out of days";
     case "onTrack":
-      return "On track";
+      return "On track";
     case "atRisk":
-      return "At risk";
+      return "At risk";
   }
 }
 

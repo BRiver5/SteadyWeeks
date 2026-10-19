@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { atLeast, poissonBinomial, wilson } from "./stats.ts";
 import { emptyModel, observe, posterior, prob, replay } from "./model.ts";
-import { buildPlan, remainingDays, type PlanInput } from "./planner.ts";
+import { buildPlan, progress, remainingDays, type PlanInput } from "./planner.ts";
 import { findConflicts } from "./conflicts.ts";
 import { whatIf } from "./changes.ts";
 import { explainHabit } from "./explain.ts";
@@ -95,13 +95,28 @@ test("branch and bound matches brute force on a small instance", () => {
               ps.push(inp.prob(habits[h].id, wd));
             }
           if (ps.length > habits[h].target + 1) ok = false;
-          value += atLeast(poissonBinomial(ps), habits[h].target) - 0.015 * ps.length - 1e-5 * ps.length * habits[h].minutes;
+          const dist = poissonBinomial(ps);
+          value += atLeast(dist, habits[h].target) + 0.2 * progress(dist, habits[h].target) - 0.015 * ps.length - 1e-5 * ps.length * habits[h].minutes;
         });
         if (load.some((l) => l > 60)) ok = false;
         if (ok) best = Math.max(best, value);
       }
   assert.equal(days.length, 4);
   assert.ok(Math.abs(plan.objective - best) < 1e-9);
+});
+
+test("minutes already done today shrink today's room", () => {
+  const habits = [habit("run", 3, 40), habit("read", 3, 30)];
+  const plan = buildPlan(input({ habits, done: { run: ["2026-10-19"] }, capacity: [60, 60, 60, 60, 60, 60, 60] }));
+  assert.equal(plan.capacity[0], 20);
+  assert.ok(!plan.habits[1].days.includes("2026-10-19"), "30 min of reading no longer fits on Monday");
+});
+
+test("a quota that can't close still gets the sessions that fit", () => {
+  // 5× по 20 минут, но место есть только в трёх днях.
+  const plan = buildPlan(input({ habits: [habit("med", 5, 20)], capacity: [20, 20, 20, 0, 0, 0, 0] }));
+  assert.equal(plan.habits[0].pHit, 0);
+  assert.equal(plan.habits[0].days.length, 3);
 });
 
 test("pins are honoured and overbooking is reported with an unpin exit", () => {
@@ -114,7 +129,7 @@ test("pins are honoured and overbooking is reported with an unpin exit", () => {
   assert.ok(plan.habits.every((h) => h.days.includes("2026-10-20")));
   const conflicts = findConflicts(inp, plan);
   const over = conflicts.find((c) => c.kind === "overbooked");
-  assert.ok(over && over.fixes.length > 0 && over.fixes[0].change.kind === "unpin");
+  assert.ok(over && over.fixes.length > 0 && over.fixes[0].changes[0].kind === "unpin");
 });
 
 test("unreachable quota offers verified exits ranked by gain", () => {
@@ -135,6 +150,17 @@ test("squeezed habit gets capacity fixes that really help", () => {
   const sq = conflicts.find((c) => c.kind === "squeezed");
   assert.ok(sq, "one of the two habits must be squeezed");
   assert.ok(sq!.fixes[0].after > plan.expectedHits);
+});
+
+test("a quota that one extra day can't save gets a combined exit", () => {
+  // Каждый будний день занят на 50 из 60 минут; Spanish 20 мин 4× нужен минимум на 4 дня.
+  const inp = input({ habits: [habit("fill", 5, 50, 0b0011111), habit("es", 4, 20, 0b0011111)], capacity: [60, 60, 60, 60, 60, 0, 0], prob: () => 0.9 });
+  const plan = buildPlan(inp);
+  // Планировщик жертвует одной из двух привычек; у жертвы одного дня мало — нужна связка.
+  const sq = findConflicts(inp, plan).find((c) => c.kind === "squeezed");
+  assert.ok(sq && sq.fixes.length > 0, "some exit must exist");
+  const combo = sq!.fixes.find((f) => f.changes.length > 1);
+  assert.ok(combo && combo.gain > 0.3);
 });
 
 test("what-if compares before and after on the same base", () => {

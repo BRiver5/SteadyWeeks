@@ -19,7 +19,6 @@ import { HabitSheet } from "../src/components/HabitSheet";
 import { SuccessBurst } from "../src/components/SuccessBurst";
 import { HabitIcon } from "../src/ui/habitIcons";
 import { dialDays, doneOn, shortDays, statusLabel } from "../src/ui/selectors";
-import { findConflicts } from "../src/lib/conflicts";
 import { addDays, dayLabel } from "../src/lib/time";
 import { pct } from "../src/ui/format";
 import { haptics } from "../src/services/haptics";
@@ -37,7 +36,7 @@ export default function HomeScreen() {
   const [focus, setFocus] = useState<Habit | null>(null);
   const [burst, setBurst] = useState(false);
 
-  const conflicts = useMemo(() => (app.input && app.plan ? findConflicts(app.input, app.plan) : []), [app.version]);
+  const conflicts = app.conflicts ?? [];
   if (!snap) return null;
   const { plan, today } = snap;
   const planOf = (id: string) => plan.habits.find((h) => h.habitId === id) as HabitPlan;
@@ -99,7 +98,7 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* 2: липкий заголовок "Today" */}
-        <StickyTitle title="Today" right={conflicts.length ? <ConflictBadge n={conflicts.length} onPress={() => router.push("/plan")} /> : undefined} />
+        {snap.habits.length === 0 ? <View /> : <StickyTitle title="Today" right={conflicts.length ? <ConflictBadge n={conflicts.length} onPress={() => router.push("/plan")} /> : undefined} />}
 
         {/* 3: сегодняшние заходы со свайпами */}
         <View style={{ paddingHorizontal: t.spacing.lg, gap: 8 }}>

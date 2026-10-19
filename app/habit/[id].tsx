@@ -62,28 +62,29 @@ export default function HabitDetail() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.background }}>
-      <ScrollView stickyHeaderIndices={[0, 3, 5, 7]} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }} keyboardShouldPersistTaps="handled">
-        {/* 0 */}
-        <View style={{ backgroundColor: t.colors.background, paddingTop: insets.top + t.spacing.sm, paddingHorizontal: t.spacing.lg, paddingBottom: t.spacing.sm, flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <IconButton label="Back" onPress={() => router.back()}>
-            <ChevronLeft size={20} color={t.colors.ink} />
-          </IconButton>
-          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: habit.color, alignItems: "center", justifyContent: "center" }}>
-            <HabitIcon name={habit.icon} color={t.colors.onAccent} />
-          </View>
-          <TextInput
-            value={name ?? habit.name}
-            onChangeText={setName}
-            onBlur={saveName}
-            onSubmitEditing={saveName}
-            accessibilityLabel="Habit name"
-            style={{ flex: 1, fontSize: 20, fontWeight: "800", color: t.colors.ink, paddingVertical: 4 }}
-            maxLength={28}
-          />
-          <IconButton label="Edit habit" onPress={() => setEditing(true)}>
-            <Pencil size={16} color={t.colors.ink} />
-          </IconButton>
+      <View style={{ backgroundColor: t.colors.background, paddingTop: insets.top + t.spacing.sm, paddingHorizontal: t.spacing.lg, paddingBottom: t.spacing.sm }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <IconButton label="Back" onPress={() => router.back()}>
+          <ChevronLeft size={20} color={t.colors.ink} />
+        </IconButton>
+        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: habit.color, alignItems: "center", justifyContent: "center" }}>
+          <HabitIcon name={habit.icon} color={t.colors.onAccent} />
         </View>
+        <TextInput
+          value={name ?? habit.name}
+          onChangeText={setName}
+          onBlur={saveName}
+          onSubmitEditing={saveName}
+          accessibilityLabel="Habit name"
+          style={{ flex: 1, fontSize: 20, fontWeight: "800", color: t.colors.ink, paddingVertical: 4 }}
+          maxLength={28}
+        />
+        <IconButton label="Edit habit" onPress={() => setEditing(true)}>
+          <Pencil size={16} color={t.colors.ink} />
+        </IconButton>
+        </View>
+      </View>
+      <ScrollView stickyHeaderIndices={[2, 4, 6]} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }} keyboardShouldPersistTaps="handled">
 
         {/* 1: эта неделя */}
         <Animated.View entering={FadeInDown.duration(360)} style={[styles.card, { backgroundColor: t.colors.surface, borderColor: t.colors.border }]}>
@@ -148,25 +149,25 @@ export default function HabitDetail() {
           </View>
         </View>
 
-        {/* 3 */}
+        {/* 2 */}
         <Sticky title="Reliability by weekday" />
         {/* 4 */}
         <View style={[styles.card, { backgroundColor: t.colors.surface, borderColor: t.colors.border }]}>
           <WeekdayOdds odds={odds} selected={wd} onSelect={setWd} color={habit.color} />
           <View style={{ marginTop: 12, padding: 12, borderRadius: 14, backgroundColor: t.colors.surfaceAlt, gap: 4 }}>
             <Text style={{ ...t.typography.label, color: t.colors.ink }}>
-              {WEEKDAYS_LONG[wd]}: {pct(sel.mean)} <Text style={{ color: t.colors.inkMuted, fontWeight: "400" }}>(90% range {pct(sel.lo)}–{pct(sel.hi)})</Text>
+              {WEEKDAYS_LONG[wd]}: {pct(sel.mean)} <Text style={{ color: t.colors.inkMuted, fontWeight: "400" }}>(90% range {Math.round(sel.lo * 100)}–{Math.round(sel.hi * 100)}%)</Text>
             </Text>
             <Text style={{ ...t.typography.caption, color: t.colors.inkMuted }}>
               {evidence(app.model, habit.id, wd) < 0.5
                 ? `No ${WEEKDAYS_LONG[wd]} record yet — borrowed from the habit's overall ${pct(sel.priorMean)}.`
-                : `${sel.s.toFixed(1)} done and ${sel.f.toFixed(1)} missed on planned ${WEEKDAYS_LONG[wd]}s (older days fade). Weighted ${Math.round((1 - sel.priorWeight) * 100)}% on this record and ${Math.round(sel.priorWeight * 100)}% on the habit overall (${pct(sel.priorMean)}).`}
+                : `About ${Math.round(sel.s)} kept and ${Math.round(sel.f)} missed on planned ${WEEKDAYS_LONG[wd]}s (older days fade). Weighted ${Math.round((1 - sel.priorWeight) * 100)}% on this record and ${Math.round(sel.priorWeight * 100)}% on the habit overall (${pct(sel.priorMean)}).`}
             </Text>
             {!allowsDay(habit.days, wd) ? <Text style={{ ...t.typography.caption, color: t.colors.signal }}>Not an allowed day — used only when pinned.</Text> : null}
           </View>
         </View>
 
-        {/* 5 */}
+        {/* 4 */}
         <Sticky title="Why this week's plan" />
         {/* 6 */}
         <View style={[styles.card, { backgroundColor: t.colors.surface, borderColor: t.colors.border, gap: 6 }]}>
@@ -191,7 +192,7 @@ export default function HabitDetail() {
           <Text style={{ ...t.typography.caption, color: t.colors.inkFaint, marginTop: 4 }}>Bars show how much each day adds to the chance of closing the quota.</Text>
         </View>
 
-        {/* 7 */}
+        {/* 6 */}
         <Sticky title={`Last ${WEEKS} weeks`} />
         {/* 8 */}
         <View style={[styles.card, { backgroundColor: t.colors.surface, borderColor: t.colors.border }]}>

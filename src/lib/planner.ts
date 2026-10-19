@@ -15,10 +15,21 @@ import { allowsDay, type Habit, type Pin } from "./types.ts";
 // Цена лишнего слота в плане: запасной день ставится, только если поднимает
 // шанс закрыть квоту больше чем на ~1.5 п.п.
 export const SLOT_COST = 0.015;
+// Вес ожидаемого прогресса к квоте (доля закрытых заходов): без него привычка,
+// которую лимиты не дают закрыть целиком, не получала ни одного захода — пустой
+// план выигрывал у частичного. Закрытие квоты остаётся главным слагаемым.
+export const PROGRESS_WEIGHT = 0.2;
+
+export function progress(dist: number[], need: number): number {
+  if (need <= 0) return 1;
+  let s = 0;
+  for (let k = 0; k < dist.length; k++) s += dist[k] * Math.min(k, need);
+  return s / need;
+}
 const MINUTE_COST = 1e-5;
-const NODE_LIMIT = 120_000;
+const NODE_LIMIT = 30_000;
 // Проверочные прогоны (выходы конфликтов, what-if превью) — меньший бюджет.
-export const QUICK_LIMIT = 15_000;
+export const QUICK_LIMIT = 3_000;
 // Допуск оптимальности: ветка отсекается, если даже в лучшем случае она
 // выигрывает меньше 0.002 ожидаемой закрытой квоты — план гарантированно
 // не хуже оптимума больше чем на эту величину (как MIP gap).
@@ -92,7 +103,9 @@ export function buildPlan(input: PlanInput, nodeLimit = NODE_LIMIT): Plan {
   const D = days.length;
   const habits = input.habits;
 
-  const caps = days.map((d) => (input.busy.includes(weekdayIndex(d)) ? 0 : input.capacity[weekdayIndex(d)]));
+  // Минуты, уже потраченные на сделанные сегодня привычки, съедают лимит дня.
+  const spent = days.map((d) => habits.reduce((s, h) => s + ((input.done[h.id] ?? []).includes(d) ? h.minutes : 0), 0));
+  const caps = days.map((d, i) => Math.max(0, (input.busy.includes(weekdayIndex(d)) ? 0 : input.capacity[weekdayIndex(d)]) - spent[i]));
 
   type Prep = {
     habit: Habit;
@@ -140,9 +153,8 @@ export function buildPlan(input: PlanInput, nodeLimit = NODE_LIMIT): Plan {
             }
           const dist = poissonBinomial(ps);
           const pHit = atLeast(dist, need);
-          // Недостижимая квота: ценность — ожидаемый прогресс, чтобы привычка всё
-          // равно получила столько заходов, сколько влезает.
-          const gain = need > nCand ? (0.25 * expectation(dist)) / need : pHit;
+          // Недостижимая квота: шанс закрыть = 0, остаётся только прогресс.
+          const gain = (need > nCand ? 0 : pHit) + PROGRESS_WEIGHT * progress(dist, need);
           options.push({ mask: sub, value: gain - SLOT_COST * size - MINUTE_COST * minutes, pHit, dist, size });
         }
       }
@@ -239,6 +251,18 @@ export function buildPlan(input: PlanInput, nodeLimit = NODE_LIMIT): Plan {
     }
   }
 
+  // Порядок обхода вариантов — по лагранжевой ценности (минуты в тесных днях
+  // "стоят" λ): первый же спуск близок к оптимуму, а не к жадному плану, где
+  // самая тяжёлая привычка забирает все дни.
+  const visit = preps.map((p) => {
+    const red = p.options.map((o) => {
+      let r = o.value;
+      for (let i = 0; i < D; i++) if (o.mask & (1 << i)) r -= lambda[i] * p.habit.minutes;
+      return r;
+    });
+    return p.options.map((_, i) => i).sort((a, b) => red[b] - red[a]);
+  });
+
   const dfs = (k: number, value: number) => {
     explored++;
     if (explored > nodeLimit) {
@@ -264,9 +288,9 @@ export function buildPlan(input: PlanInput, nodeLimit = NODE_LIMIT): Plan {
     if (k > 0 && value + lagBound(lambda, k) <= best + GAP) return;
     const idx = order[k];
     const p = preps[idx];
-    for (let o = 0; o < p.options.length; o++) {
+    for (const o of visit[idx]) {
       const opt = p.options[o];
-      if (value + opt.value + rest <= best + GAP) break; // варианты отсортированы
+      if (value + opt.value + rest <= best + GAP) continue;
       if (!fits(p.habit, opt.mask)) continue;
       apply(p.habit, opt.mask, 1);
       choice[idx] = o;
@@ -275,6 +299,39 @@ export function buildPlan(input: PlanInput, nodeLimit = NODE_LIMIT): Plan {
       if (!exact) return;
     }
   };
+  // Стартовый рекорд: жадный план + локальный поиск (вариант одной привычки
+  // при фиксированных остальных, до сходимости). С хорошим рекордом ветвление
+  // отсекает почти всё дерево и чаще успевает ДОКАЗАТЬ оптимальность.
+  {
+    const pick = new Array(preps.length).fill(-1);
+    for (const idx of order) {
+      const p = preps[idx];
+      const o = visit[idx].find((i) => fits(p.habit, p.options[i].mask)) ?? -1;
+      pick[idx] = o;
+      if (o >= 0) apply(p.habit, p.options[o].mask, 1);
+    }
+    if (pick.every((o) => o >= 0)) {
+      for (let pass = 0; pass < 6; pass++) {
+        let improved = false;
+        for (const idx of order) {
+          const p = preps[idx];
+          apply(p.habit, p.options[pick[idx]].mask, -1);
+          const o = p.options.findIndex((opt) => fits(p.habit, opt.mask));
+          if (o >= 0 && o !== pick[idx] && p.options[o].value > p.options[pick[idx]].value + 1e-12) {
+            pick[idx] = o;
+            improved = true;
+          }
+          apply(p.habit, p.options[pick[idx]].mask, 1);
+        }
+        if (!improved) break;
+      }
+      best = pick.reduce((sum, o, idx) => sum + preps[idx].options[o].value, 0);
+      bestChoice = pick.slice();
+      for (const idx of order) apply(preps[idx].habit, preps[idx].options[pick[idx]].mask, -1);
+    } else {
+      for (const idx of order) if (pick[idx] >= 0) apply(preps[idx].habit, preps[idx].options[pick[idx]].mask, -1);
+    }
+  }
   dfs(0, 0);
 
   const finalLoad = new Array(D).fill(0);

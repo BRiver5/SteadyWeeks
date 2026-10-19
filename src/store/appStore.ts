@@ -10,6 +10,7 @@ import { observationsBetween, type Completion, type PlannedRow } from "../lib/hi
 import { addDays, todayLocal, weekStart } from "../lib/time";
 import type { Habit, ModelState, Pin } from "../lib/types";
 import type { Change } from "../lib/changes";
+import { findConflicts, type Conflict } from "../lib/conflicts";
 import { setHapticsEnabled } from "../services/haptics";
 
 export const MAX_HABITS = 8;
@@ -32,7 +33,11 @@ type State = {
   settings: Settings;
   input: PlanInput | null;
   plan: Plan | null;
+  // Конфликты с проверенными выходами — дорогие (десятки перепланирований),
+  // поэтому считаются один раз на версию и уже после отрисовки нового плана.
+  conflicts: Conflict[] | null;
   refresh: () => Promise<void>;
+  rebuild: () => Promise<void>;
   addHabit: (d: repo.HabitDraft) => Promise<Habit>;
   updateHabit: (h: Habit) => Promise<void>;
   deleteHabit: (id: string) => Promise<void>;
@@ -51,6 +56,8 @@ export function targetFor(overrides: State["overrides"], week: string, h: Habit)
   return overrides.find((o) => o.week === week && o.habitId === h.id)?.target ?? h.target;
 }
 
+let refreshChain: Promise<void> = Promise.resolve();
+
 export const useApp = create<State>((set, get) => ({
   ready: false,
   version: 0,
@@ -66,8 +73,13 @@ export const useApp = create<State>((set, get) => ({
   settings: { capacity: DEFAULT_CAPACITY, haptics: true },
   input: null,
   plan: null,
+  conflicts: null,
 
-  refresh: async () => {
+  // Пересборки идут по очереди: иначе более ранняя могла закончиться позже и
+  // перезаписать стор устаревшим планом.
+  refresh: () => (refreshChain = refreshChain.then(() => get().rebuild()).catch(() => undefined)),
+
+  rebuild: async () => {
     const today = todayLocal();
     const week = weekStart(today);
     const yesterday = addDays(today, -1);
@@ -141,7 +153,13 @@ export const useApp = create<State>((set, get) => ({
       settings: { capacity: input.capacity, haptics },
       input,
       plan,
+      conflicts: null,
     });
+    const v = get().version;
+    setTimeout(() => {
+      const s = get();
+      if (s.version === v && s.input && s.plan) set({ conflicts: findConflicts(s.input, s.plan) });
+    }, 0);
   },
 
   addHabit: async (d) => {

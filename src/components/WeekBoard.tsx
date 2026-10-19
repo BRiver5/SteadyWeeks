@@ -169,7 +169,7 @@ export function WeekBoard({
                   <Animated.View entering={FadeIn.delay(ci * 40)} style={{ width: `${ratio * 100}%`, height: 5, backgroundColor: over ? t.colors.danger : t.colors.accent }} />
                 </View>
                 <Text style={{ fontSize: 10, color: over ? t.colors.danger : t.colors.inkFaint, marginTop: 3 }}>{d.busy ? "busy" : `${d.load}/${d.capacity}`}</Text>
-                <View style={{ marginTop: 10, gap: 8, alignItems: "center", minHeight: 150 }}>
+                <View style={{ marginTop: 10, gap: 8, alignItems: "center", minHeight: 96 }}>
                   {d.chips.map((c) => (
                     <Chip
                       key={c.habitId}

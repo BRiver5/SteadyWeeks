@@ -22,10 +22,12 @@ function Segment({ cx, r, stroke, color, startDeg, lenDeg, fill, delay }: { cx: 
     progress.value = 0;
     progress.value = withDelay(delay, withTiming(fill, { duration: 650, easing: Easing.out(Easing.cubic) }));
   }, [fill, delay]);
-  const props = useAnimatedProps(() => ({ strokeDasharray: `${len * progress.value} ${C}` }));
+  // Нулевая длина штриха с круглым краем рисовалась бы точкой — поэтому края
+  // плоские, а пустая заливка прозрачна.
+  const props = useAnimatedProps(() => ({ strokeDasharray: `${len * progress.value} ${C}`, strokeOpacity: progress.value > 0.002 ? 1 : 0 }));
   return (
     <G rotation={startDeg} originX={cx} originY={cx}>
-      <AnimatedCircle cx={cx} cy={cx} r={r} stroke={color} strokeWidth={stroke} strokeLinecap="round" fill="none" animatedProps={props} />
+      <AnimatedCircle cx={cx} cy={cx} r={r} stroke={color} strokeWidth={stroke} strokeLinecap="butt" fill="none" animatedProps={props} />
     </G>
   );
 }
@@ -49,7 +51,7 @@ export function WeekDial({ days, expected, total, size = 220 }: { days: DialDay[
           const trackLen = (segDeg / 360) * C;
           return (
             <G key={`t${i}`} rotation={s} originX={cx} originY={cx}>
-              <Circle cx={cx} cy={cx} r={r} stroke={d.isToday ? t.colors.accentSoft : t.colors.backgroundAlt} strokeWidth={stroke} strokeLinecap="round" fill="none" strokeDasharray={`${trackLen} ${C}`} />
+              <Circle cx={cx} cy={cx} r={r} stroke={d.isToday ? t.colors.accentSoft : t.colors.backgroundAlt} strokeWidth={stroke} strokeLinecap="butt" fill="none" strokeDasharray={`${trackLen} ${C}`} />
             </G>
           );
         })}
@@ -68,7 +70,7 @@ export function WeekDial({ days, expected, total, size = 220 }: { days: DialDay[
       </Svg>
       {days.map((d, i) => {
         const mid = ((start + i * (segDeg + GAP_DEG) + segDeg / 2) * Math.PI) / 180;
-        const rr = r + stroke / 2 + 2;
+        const rr = r + stroke / 2 + 9;
         const x = cx + rr * Math.cos(mid);
         const y = cx + rr * Math.sin(mid);
         return (

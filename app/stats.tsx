@@ -99,11 +99,12 @@ export default function StatsScreen() {
       <SectionTitle title="Quotas closed per week" right={week ? <Text onPress={() => setWeek(null)} style={{ ...t.typography.label, color: t.colors.accent }}>All weeks</Text> : undefined} />
       <View style={{ height: 12 }} />
       <WeekBars
-        weeks={history.map((w) => ({ key: w.week, label: dayLabel(w.week).replace(" ", " "), hit: w.hits, total: w.total, current: w.week === snap.week }))}
+        weeks={history.map((w) => ({ key: w.week, label: String(Number(w.week.slice(8, 10))), hit: w.hits, total: w.total, current: w.week === snap.week }))}
         selected={week}
         onSelect={setWeek}
       />
       <Text style={{ ...t.typography.caption, color: t.colors.inkMuted, marginTop: 10 }}>
+        <Text style={{ color: t.colors.inkFaint }}>Weeks starting {dayLabel(history[0].week)} – {dayLabel(snap.week)}. </Text>
         {selWeek ? `${selWeek.hits} of ${selWeek.total} quotas closed · ${selWeek.done} sessions${selWeek.week === snap.week ? " so far" : ""}` : "Tap a week to see it in every section below. This week is in amber."}
       </Text>
     </View>,
@@ -247,18 +248,20 @@ export default function StatsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.background }}>
-      <ScrollView stickyHeaderIndices={[0]} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
-        <View style={{ backgroundColor: t.colors.background, paddingTop: insets.top + t.spacing.sm, paddingHorizontal: t.spacing.lg, paddingBottom: t.spacing.sm, flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <IconButton label="Back" onPress={() => router.back()}>
-            <ChevronLeft size={20} color={t.colors.ink} />
-          </IconButton>
-          <View style={{ flex: 1 }}>
-            <Text style={{ ...t.typography.subtitle, color: t.colors.ink }}>Stats</Text>
-            <Text numberOfLines={1} style={{ ...t.typography.caption, color: t.colors.inkMuted }}>
-              {[week ? `Week of ${dayLabel(week)}` : `Last ${WEEKS} weeks`, selHabit?.name].filter(Boolean).join(" · ")}
-            </Text>
-          </View>
+      <View style={{ backgroundColor: t.colors.background, paddingTop: insets.top + t.spacing.sm, paddingHorizontal: t.spacing.lg, paddingBottom: t.spacing.sm }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <IconButton label="Back" onPress={() => router.back()}>
+          <ChevronLeft size={20} color={t.colors.ink} />
+        </IconButton>
+        <View style={{ flex: 1 }}>
+          <Text style={{ ...t.typography.subtitle, color: t.colors.ink }}>Stats</Text>
+          <Text numberOfLines={1} style={{ ...t.typography.caption, color: t.colors.inkMuted }}>
+            {[week ? `Week of ${dayLabel(week)}` : `Last ${WEEKS} weeks`, selHabit?.name].filter(Boolean).join(" · ")}
+          </Text>
         </View>
+        </View>
+      </View>
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
         <View style={{ paddingHorizontal: t.spacing.lg, gap: 12, paddingTop: 4 }}>
           {sections.map((s, i) => (
             <Animated.View key={i} entering={FadeInDown.delay(staggerDelay(i, 60)).duration(400)}>

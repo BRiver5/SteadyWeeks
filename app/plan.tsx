@@ -14,7 +14,7 @@ import { PressableScale } from "../src/components/PressableScale";
 import { SuccessBurst } from "../src/components/SuccessBurst";
 import { HabitIcon } from "../src/ui/habitIcons";
 import { boardDays, statusLabel } from "../src/ui/selectors";
-import { findConflicts, type Fix } from "../src/lib/conflicts";
+import type { Fix } from "../src/lib/conflicts";
 import { explainHabit } from "../src/lib/explain";
 import { weekdayIndex } from "../src/lib/time";
 import { WEEKDAYS_LONG } from "../src/lib/types";
@@ -31,7 +31,7 @@ export default function PlanScreen() {
   const [selected, setSelected] = useState<string | null>(params.habit ?? null);
   const [burst, setBurst] = useState(false);
 
-  const conflicts = useMemo(() => (app.input && app.plan ? findConflicts(app.input, app.plan) : []), [app.version]);
+  const conflicts = app.conflicts ?? [];
   const sel = selected ?? snap?.plan.habits.find((h) => h.status !== "met")?.habitId ?? snap?.habits[0]?.id ?? null;
   const explanation = useMemo(() => (app.input && app.plan && sel ? explainHabit(app.input, app.plan, app.model, sel) : null), [app.version, sel]);
   if (!snap) return null;
@@ -40,31 +40,33 @@ export default function PlanScreen() {
   const selPlan = sel ? snap.plan.habits.find((h) => h.habitId === sel) : undefined;
 
   const applyFix = async (f: Fix) => {
-    await app.applyChange(f.change);
+    for (const c of f.changes) await app.applyChange(c);
     haptics.success();
     setBurst(true);
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.background }}>
-      <ScrollView stickyHeaderIndices={[0]} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
-        <View style={{ backgroundColor: t.colors.background, paddingTop: insets.top + t.spacing.sm, paddingHorizontal: t.spacing.lg, paddingBottom: t.spacing.sm, flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <IconButton label="Back" onPress={() => router.back()}>
-            <ChevronLeft size={20} color={t.colors.ink} />
-          </IconButton>
-          <View style={{ flex: 1 }}>
-            <Text style={{ ...t.typography.subtitle, color: t.colors.ink }}>Week plan</Text>
-            <Text style={{ ...t.typography.caption, color: t.colors.inkMuted }}>
-              {pct(snap.plan.expectedHits / Math.max(1, snap.habits.length))} of quotas expected · {snap.plan.exact ? "best plan, proven" : "best plan found in budget"}
-            </Text>
-          </View>
-          <PressableScale onPress={() => router.push("/whatif")} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: t.colors.ink }}>
-            <GitCompareArrows size={14} color={t.colors.surface} />
-            <Text numberOfLines={1} style={{ ...t.typography.label, color: t.colors.surface }}>
-              What{" "}if
-            </Text>
-          </PressableScale>
+      <View style={{ backgroundColor: t.colors.background, paddingTop: insets.top + t.spacing.sm, paddingHorizontal: t.spacing.lg, paddingBottom: t.spacing.sm }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <IconButton label="Back" onPress={() => router.back()}>
+          <ChevronLeft size={20} color={t.colors.ink} />
+        </IconButton>
+        <View style={{ flex: 1 }}>
+          <Text style={{ ...t.typography.subtitle, color: t.colors.ink }}>Week plan</Text>
+          <Text style={{ ...t.typography.caption, color: t.colors.inkMuted }}>
+            {pct(snap.plan.expectedHits / Math.max(1, snap.habits.length))} of quotas expected · {snap.plan.exact ? "best plan, proven" : "best plan found in budget"}
+          </Text>
         </View>
+        <PressableScale onPress={() => router.push("/whatif")} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: t.colors.ink }}>
+          <GitCompareArrows size={14} color={t.colors.surface} />
+          <Text numberOfLines={1} style={{ ...t.typography.label, color: t.colors.surface }}>
+            What{" "}if
+          </Text>
+        </PressableScale>
+        </View>
+      </View>
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
 
         <Animated.View entering={FadeInDown.duration(380)} style={[styles.card, { backgroundColor: t.colors.surface, borderColor: t.colors.border }]}>
           {snap.habits.length === 0 ? (
@@ -120,7 +122,7 @@ export default function PlanScreen() {
 
         {selHabit && selPlan && explanation ? (
           <View style={{ paddingHorizontal: t.spacing.lg, marginTop: t.spacing.xl, gap: 10 }}>
-            <SectionTitle title="Why these days" right={<Text style={{ ...t.typography.label, color: t.colors.inkMuted }}>{statusLabel(selPlan)}</Text>} />
+            <SectionTitle title="Why these days" right={<Text numberOfLines={1} style={{ ...t.typography.label, color: t.colors.inkMuted }}>{statusLabel(selPlan)}</Text>} />
             <Animated.View key={sel} entering={FadeInDown.duration(320)} style={[styles.card, { marginHorizontal: 0, backgroundColor: t.colors.surface, borderColor: t.colors.border }]}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: t.colors.surfaceAlt, alignItems: "center", justifyContent: "center" }}>
@@ -149,7 +151,7 @@ export default function PlanScreen() {
                     <View style={{ width: `${Math.max(0, c.p.mean - c.p.priorMean * c.p.priorWeight) * 100}%`, backgroundColor: selHabit.color }} />
                   </View>
                   <Text style={{ ...t.typography.caption, color: t.colors.inkMuted }}>
-                    {Math.round(c.p.priorWeight * 100)}% from the habit overall ({pct(c.p.priorMean)}), {Math.round((1 - c.p.priorWeight) * 100)}% from your {WEEKDAYS_LONG[weekdayIndex(c.day)].slice(0, 3)} record ({c.p.s.toFixed(1)} done / {c.p.f.toFixed(1)} missed, recent count more). Adds +{Math.round(c.marginal * 100)} pts to the quota odds.
+                    {Math.round(c.p.priorWeight * 100)}% from the habit overall ({pct(c.p.priorMean)}), {Math.round((1 - c.p.priorWeight) * 100)}% from your {WEEKDAYS_LONG[weekdayIndex(c.day)].slice(0, 3)} record (≈{Math.round(c.p.s)} kept / {Math.round(c.p.f)} missed, recent days weigh more). Adds +{Math.round(c.marginal * 100)} pts to the quota odds.
                   </Text>
                 </View>
               ))}
