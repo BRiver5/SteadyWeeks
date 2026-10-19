@@ -5,13 +5,13 @@
     "version": "1.0.0",
     "scheme": "steadyweeks",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./release/creo/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./release/creo/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F6F5F0"
+      "backgroundColor": "#FCFBF7"
     },
     "ios": {
       "supportsTablet": true,
@@ -21,8 +21,8 @@
       "package": "com.steadyweeks.app",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundImage": "./assets/adaptive-icon-background.png",
-        "foregroundImage": "./assets/adaptive-icon-foreground.png"
+        "foregroundImage": "./release/creo/adaptive-foreground.png",
+        "backgroundColor": "#FCFBF7"
       },
       "predictiveBackGestureEnabled": false,
       "_comment_blockedPermissions": "Steady Weeks полностью локальное и без уведомлений: заблокированы в том числе INTERNET и POST_NOTIFICATIONS. Нужна только вибрация (VIBRATE не блокируется).",

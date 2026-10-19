@@ -12,7 +12,8 @@
     "test": "node --test",
     "verify": "node tools/verify.js",
     "adaptive-icon": "node tools/adaptive-icon.js",
-    "palette": "node tools/palette-search.js"
+    "palette": "node tools/palette-search.js",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "expo": "~54.0.35",
